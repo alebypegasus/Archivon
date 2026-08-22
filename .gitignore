@@ -59,3 +59,4 @@ cookies.txt
 *.txt
 !requirements.txt
 !README.md
+flutter_backup/
