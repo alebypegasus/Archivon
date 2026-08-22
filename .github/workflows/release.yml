@@ -14,17 +14,30 @@ jobs:
     name: Build on ${{ matrix.os }} (${{ matrix.arch_label }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
+          # macOS Apple Silicon (M1, M2, M3, M4)
           - os: macos-14
-            arch_label: Apple-Silicon-M1-M2-M3
-            artifact_name: Archivon-macOS.dmg
+            arch_label: AppleSilicon
+            artifact_name: Archivon-macOS-AppleSilicon.dmg
             build_script: |
               pip install -r requirements.txt pyinstaller
               chmod +x build_macos.sh
-              ./build_macos.sh
-            asset_path: dist/Archivon-macOS.dmg
+              ./build_macos.sh AppleSilicon
+            asset_path: dist/Archivon-macOS-AppleSilicon.dmg
 
+          # macOS Intel (x86_64)
+          - os: macos-13
+            arch_label: Intel
+            artifact_name: Archivon-macOS-Intel.dmg
+            build_script: |
+              pip install -r requirements.txt pyinstaller
+              chmod +x build_macos.sh
+              ./build_macos.sh Intel
+            asset_path: dist/Archivon-macOS-Intel.dmg
+
+          # Windows 64-bit
           - os: windows-latest
             arch_label: Windows-x64
             artifact_name: Archivon-Windows.exe
@@ -33,6 +46,7 @@ jobs:
               pyinstaller --noconfirm --windowed --onefile --name "Archivon-Windows" --add-data "archivon_py;archivon_py" --hidden-import "PyQt6.QtSvg" --hidden-import "pymupdf" --hidden-import "google.generativeai" --hidden-import "gdown" archivon_py/main.py
             asset_path: dist/Archivon-Windows.exe
 
+          # Linux 64-bit
           - os: ubuntu-latest
             arch_label: Linux-x86_64
             artifact_name: Archivon-Linux-x86_64.tar.gz
