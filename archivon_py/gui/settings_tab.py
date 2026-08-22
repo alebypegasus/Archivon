@@ -1,4 +1,5 @@
 import os
+import shutil
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QLineEdit, QFormLayout, QPushButton, QHBoxLayout,
     QFileDialog, QMessageBox, QComboBox, QFrame, QCheckBox
@@ -18,7 +19,7 @@ class SettingsTab(QWidget):
         title_box = QVBoxLayout()
         title = QLabel("Configurações do Sistema")
         title.setStyleSheet("font-size: 22px; font-weight: 800; color: #F8FAFC;")
-        subtitle = QLabel("Gerencie credenciais de IA, caminhos de armazenamento, cookies do Drive e otimizações.")
+        subtitle = QLabel("Gerencie credenciais de IA, caminhos de armazenamento, LibreOffice e otimizações.")
         subtitle.setStyleSheet("font-size: 12.5px; color: #94A3B8;")
         title_box.addWidget(title)
         title_box.addWidget(subtitle)
@@ -100,7 +101,30 @@ class SettingsTab(QWidget):
 
         form_layout.addRow(QLabel("Modelo Gemini Ativo:"), self.model_combo)
 
-        # Cookies File Selector (for Google Drive private folders)
+        # LibreOffice Path / Status
+        soffice_layout = QVBoxLayout()
+        soffice_layout.setSpacing(4)
+        
+        soffice_row = QHBoxLayout()
+        self.soffice_path_edit = QLineEdit(self.config_data.get("soffice_path", ""))
+        self.soffice_path_edit.setPlaceholderText("Automático (detectado no sistema ou pasta local)")
+        self.soffice_path_edit.setFixedHeight(38)
+        soffice_row.addWidget(self.soffice_path_edit)
+
+        btn_soffice = QPushButton("Procurar...")
+        btn_soffice.setFixedHeight(38)
+        btn_soffice.setStyleSheet("background-color: #334155; color: #F8FAFC;")
+        btn_soffice.clicked.connect(self.select_soffice_binary)
+        soffice_row.addWidget(btn_soffice)
+
+        self.soffice_status_label = QLabel()
+        self._update_soffice_status()
+
+        soffice_layout.addLayout(soffice_row)
+        soffice_layout.addWidget(self.soffice_status_label)
+        form_layout.addRow(QLabel("Motor LibreOffice (soffice):"), soffice_layout)
+
+        # Cookies File Selector
         self.cookies_file = QLineEdit(self.config_data.get("cookies_file", ""))
         self.cookies_file.setReadOnly(True)
         self.cookies_file.setPlaceholderText("Opcional: selecione o arquivo cookies.txt para pastas privadas")
@@ -170,6 +194,24 @@ class SettingsTab(QWidget):
 
         layout.addStretch()
 
+    def _update_soffice_status(self):
+        from core.download_manager import DownloadManager
+        dm = DownloadManager()
+        detected = dm._get_soffice_binary(self.config_data)
+        if detected:
+            self.soffice_status_label.setText(f"Status: Conectado ({detected})")
+            self.soffice_status_label.setStyleSheet("font-size: 11.5px; color: #34D399; font-weight: 600;")
+        else:
+            self.soffice_status_label.setText("Status: Não detectado (necessário para converter PPTX/DOCX)")
+            self.soffice_status_label.setStyleSheet("font-size: 11.5px; color: #F87171; font-weight: 600;")
+
+    def select_soffice_binary(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Selecione o executável soffice", "", "Executáveis (soffice soffice.exe *);;Todos os Arquivos (*)")
+        if file_path:
+            self.soffice_path_edit.setText(file_path)
+            self.config_data["soffice_path"] = file_path
+            self._update_soffice_status()
+
     def toggle_key_visibility(self):
         if self.gemini_api_key.echoMode() == QLineEdit.EchoMode.Password:
             self.gemini_api_key.setEchoMode(QLineEdit.EchoMode.Normal)
@@ -209,12 +251,14 @@ class SettingsTab(QWidget):
     def save_settings(self):
         self.config_data["gemini_api_key"] = self.gemini_api_key.text().strip()
         self.config_data["gemini_model"] = self.model_combo.currentText().strip()
+        self.config_data["soffice_path"] = self.soffice_path_edit.text().strip()
         self.config_data["cookies_file"] = self.cookies_file.text().strip()
         self.config_data["temp_folder"] = self.temp_folder.text().strip()
         self.config_data["output_folder"] = self.output_folder.text().strip()
         self.config_data["compress_pdf"] = self.compress_check.isChecked()
 
         if save_config(self.config_data):
+            self._update_soffice_status()
             QMessageBox.information(self, "Sucesso", "Configurações salvas com sucesso!")
         else:
             QMessageBox.warning(self, "Erro", "Houve um problema ao salvar as configurações.")

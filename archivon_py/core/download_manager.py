@@ -327,19 +327,61 @@ class DownloadManager(QObject):
                 with self.active_tasks_lock:
                     self.error_count += 1
 
-    def _convert_to_pdf(self, input_path: str, temp_dir: str) -> str:
-        soffice_bin = shutil.which("soffice")
-        if not soffice_bin and os.path.exists("/Applications/LibreOffice.app/Contents/MacOS/soffice"):
-            soffice_bin = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+    def _get_soffice_binary(self, config: dict) -> str | None:
+        custom_path = config.get("soffice_path", "").strip()
+        if custom_path and os.path.exists(custom_path):
+            return custom_path
 
+        # 1. Procura no PATH do sistema operacional
+        soffice_bin = shutil.which("soffice")
+        if soffice_bin:
+            return soffice_bin
+
+        # 2. Caminhos padrão macOS
+        mac_paths = [
+            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            os.path.expanduser("~/Applications/LibreOffice.app/Contents/MacOS/soffice"),
+            os.path.join(os.getcwd(), "LibreOffice.app/Contents/MacOS/soffice")
+        ]
+        for p in mac_paths:
+            if os.path.exists(p):
+                return p
+
+        # 3. Caminhos padrão Windows
+        win_paths = [
+            r"C:\Program Files\LibreOffice\program\soffice.exe",
+            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+            os.path.join(os.getcwd(), "LibreOffice", "program", "soffice.exe"),
+            os.path.join(os.getcwd(), "libreoffice", "program", "soffice.exe"),
+            os.path.join(os.path.dirname(os.getcwd()), "LibreOffice", "program", "soffice.exe")
+        ]
+        for p in win_paths:
+            if os.path.exists(p):
+                return p
+
+        # 4. Caminhos padrão Linux
+        linux_paths = [
+            "/usr/bin/soffice",
+            "/usr/local/bin/soffice",
+            "/usr/lib/libreoffice/program/soffice",
+            "/opt/libreoffice/program/soffice"
+        ]
+        for p in linux_paths:
+            if os.path.exists(p):
+                return p
+
+        return None
+
+    def _convert_to_pdf(self, input_path: str, temp_dir: str, config: dict) -> str:
+        soffice_bin = self._get_soffice_binary(config)
         if not soffice_bin:
-            raise FileNotFoundError("LibreOffice não encontrado no sistema.")
+            raise FileNotFoundError("LibreOffice (soffice) não foi detectado no sistema ou pasta local.")
 
         cmd = [soffice_bin, "--headless", "--convert-to", "pdf", "--outdir", temp_dir, input_path]
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)
         
         if proc.returncode != 0:
-            raise RuntimeError(f"Erro na conversão (código {proc.returncode}): {proc.stderr}")
+            raise RuntimeError(f"Erro na conversão LibreOffice (código {proc.returncode}): {proc.stderr}")
 
         base_name = os.path.splitext(os.path.basename(input_path))[0]
         expected_pdf = os.path.join(temp_dir, f"{base_name}.pdf")
@@ -383,7 +425,7 @@ class DownloadManager(QObject):
                 self.running_event.wait()
                 self._emit_log("convert", f"Convertendo apresentação/documento: {filename}")
                 try:
-                    target_pdf_path = self._convert_to_pdf(filepath, temp_dir)
+                    target_pdf_path = self._convert_to_pdf(filepath, temp_dir, config)
                     created_converted_file = True
                 except Exception as conv_err:
                     self._emit_log("error", f"Erro na conversão de {filename}", str(conv_err))
