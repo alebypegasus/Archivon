@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from utils.config import load_config, save_config
 from utils.icons import get_svg_icon
+from utils.theme import get_theme_colors, get_current_theme_name
 
 class SettingsTab(QWidget):
     def __init__(self):
@@ -18,19 +19,19 @@ class SettingsTab(QWidget):
         # Header
         title_box = QVBoxLayout()
         title = QLabel("Configurações do Sistema")
-        title.setStyleSheet("font-size: 22px; font-weight: 800; color: #F8FAFC;")
+        title.setStyleSheet("font-size: 22px; font-weight: 800;")
         subtitle = QLabel("Gerencie credenciais de IA, caminhos de armazenamento, LibreOffice e otimizações.")
-        subtitle.setStyleSheet("font-size: 12.5px; color: #94A3B8;")
+        subtitle.setStyleSheet("font-size: 12.5px; opacity: 0.75;")
         title_box.addWidget(title)
         title_box.addWidget(subtitle)
         layout.addLayout(title_box)
 
         # Settings Card
         settings_card = QFrame()
+        settings_card.setObjectName("settingsCard")
         settings_card.setStyleSheet("""
-            QFrame {
-                background-color: #1E293B;
-                border: 1px solid #334155;
+            QFrame#settingsCard {
+                border: 1px solid rgba(148, 163, 184, 0.2);
                 border-radius: 10px;
                 padding: 16px;
             }
@@ -50,7 +51,6 @@ class SettingsTab(QWidget):
 
         self.toggle_key_btn = QPushButton("Exibir")
         self.toggle_key_btn.setFixedHeight(38)
-        self.toggle_key_btn.setStyleSheet("background-color: #334155; color: #F8FAFC; padding: 0 12px;")
         self.toggle_key_btn.clicked.connect(self.toggle_key_visibility)
         key_layout.addWidget(self.toggle_key_btn)
 
@@ -66,21 +66,6 @@ class SettingsTab(QWidget):
         # Gemini Model Selector
         self.model_combo = QComboBox()
         self.model_combo.setFixedHeight(38)
-        self.model_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #0F172A;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 6px 12px;
-                color: #F8FAFC;
-                font-weight: 600;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1E293B;
-                selection-background-color: #4F46E5;
-                color: #F8FAFC;
-            }
-        """)
         
         default_models = [
             "gemini-2.0-flash-lite",
@@ -113,7 +98,6 @@ class SettingsTab(QWidget):
 
         btn_soffice = QPushButton("Procurar...")
         btn_soffice.setFixedHeight(38)
-        btn_soffice.setStyleSheet("background-color: #334155; color: #F8FAFC;")
         btn_soffice.clicked.connect(self.select_soffice_binary)
         soffice_row.addWidget(btn_soffice)
 
@@ -134,7 +118,6 @@ class SettingsTab(QWidget):
         cookies_layout.addWidget(self.cookies_file)
         btn_cookies = QPushButton("Selecionar...")
         btn_cookies.setFixedHeight(38)
-        btn_cookies.setStyleSheet("background-color: #334155; color: #F8FAFC;")
         btn_cookies.clicked.connect(self.select_cookies_file)
         cookies_layout.addWidget(btn_cookies)
         form_layout.addRow(QLabel("Cookies Google Drive (cookies.txt):"), cookies_layout)
@@ -148,7 +131,6 @@ class SettingsTab(QWidget):
         temp_layout.addWidget(self.temp_folder)
         btn_temp = QPushButton("Navegar...")
         btn_temp.setFixedHeight(38)
-        btn_temp.setStyleSheet("background-color: #334155; color: #F8FAFC;")
         btn_temp.clicked.connect(lambda: self.select_folder(self.temp_folder))
         temp_layout.addWidget(btn_temp)
         form_layout.addRow(QLabel("Pasta Temporária:"), temp_layout)
@@ -162,7 +144,6 @@ class SettingsTab(QWidget):
         out_layout.addWidget(self.output_folder)
         btn_out = QPushButton("Navegar...")
         btn_out.setFixedHeight(38)
-        btn_out.setStyleSheet("background-color: #334155; color: #F8FAFC;")
         btn_out.clicked.connect(lambda: self.select_folder(self.output_folder))
         out_layout.addWidget(btn_out)
         form_layout.addRow(QLabel("Pasta da Biblioteca:"), out_layout)
@@ -170,7 +151,7 @@ class SettingsTab(QWidget):
         # Compression Checkbox
         self.compress_check = QCheckBox("Comprimir e otimizar imagens/fontes dos PDFs durante a higienização")
         self.compress_check.setChecked(self.config_data.get("compress_pdf", True))
-        self.compress_check.setStyleSheet("font-size: 13px; color: #F1F5F9;")
+        self.compress_check.setStyleSheet("font-size: 13px;")
         form_layout.addRow(QLabel("Otimização de PDF:"), self.compress_check)
 
         layout.addWidget(settings_card)

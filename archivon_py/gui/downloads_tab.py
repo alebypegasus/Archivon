@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QColor, QFont
 from utils.icons import get_svg_icon
+from utils.theme import get_theme_colors, get_current_theme_name
 
 class DropTextEdit(QTextEdit):
     def __init__(self, parent=None):
@@ -37,12 +38,11 @@ class MetricCard(QFrame):
     def __init__(self, title: str, value: str, accent_color: str, icon_name: str):
         super().__init__()
         self.setObjectName("metricCard")
-        self.setStyleSheet(f"""
-            QFrame#metricCard {{
-                background-color: #1E293B;
-                border: 1px solid #334155;
+        self.setStyleSheet("""
+            QFrame#metricCard {
                 border-radius: 10px;
-            }}
+                border: 1px solid rgba(148, 163, 184, 0.2);
+            }
         """)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
@@ -56,7 +56,7 @@ class MetricCard(QFrame):
         text_layout.setSpacing(2)
 
         self.title_label = QLabel(title)
-        self.title_label.setStyleSheet("font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase;")
+        self.title_label.setStyleSheet("font-size: 11px; font-weight: 700; text-transform: uppercase; opacity: 0.8;")
 
         self.value_label = QLabel(value)
         self.value_label.setStyleSheet(f"font-size: 20px; font-weight: 800; color: {accent_color};")
@@ -81,9 +81,9 @@ class DownloadsTab(QWidget):
         header_layout = QHBoxLayout()
         title_box = QVBoxLayout()
         title = QLabel("Painel de Controle e Processamento")
-        title.setStyleSheet("font-size: 22px; font-weight: 800; color: #F8FAFC;")
+        title.setStyleSheet("font-size: 22px; font-weight: 800;")
         subtitle = QLabel("Esteira automatizada de download, sanitização profunda e classificação com Gemini.")
-        subtitle.setStyleSheet("font-size: 12.5px; color: #94A3B8;")
+        subtitle.setStyleSheet("font-size: 12.5px; opacity: 0.75;")
         title_box.addWidget(title)
         title_box.addWidget(subtitle)
         header_layout.addLayout(title_box)
@@ -120,45 +120,32 @@ class DownloadsTab(QWidget):
         self.start_btn = QPushButton("Iniciar Processamento")
         self.start_btn.setIcon(get_svg_icon("play", "#FFFFFF", 16))
         self.start_btn.setMinimumHeight(38)
-        self.start_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4F46E5;
-                font-weight: 700;
-            }
-            QPushButton:hover {
-                background-color: #6366F1;
-            }
-        """)
         btn_layout.addWidget(self.start_btn)
 
         self.pause_btn = QPushButton("Pausar")
         self.pause_btn.setIcon(get_svg_icon("pause", "#F1F5F9", 16))
         self.pause_btn.setMinimumHeight(38)
-        self.pause_btn.setStyleSheet("background-color: #334155; color: #F1F5F9;")
         btn_layout.addWidget(self.pause_btn)
 
         self.cancel_btn = QPushButton("Cancelar Tudo")
-        self.cancel_btn.setIcon(get_svg_icon("alert", "#F87171", 16))
+        self.cancel_btn.setIcon(get_svg_icon("alert", "#EF4444", 16))
         self.cancel_btn.setMinimumHeight(38)
-        self.cancel_btn.setStyleSheet("background-color: #1E293B; border: 1px solid #EF4444; color: #F87171;")
+        self.cancel_btn.setStyleSheet("border: 1px solid #EF4444; color: #EF4444; background: transparent;")
         btn_layout.addWidget(self.cancel_btn)
 
         self.export_log_btn = QPushButton("Exportar Log")
         self.export_log_btn.setIcon(get_svg_icon("export", "#94A3B8", 16))
         self.export_log_btn.setMinimumHeight(38)
-        self.export_log_btn.setStyleSheet("background-color: #1E293B; border: 1px solid #334155; color: #94A3B8;")
         btn_layout.addWidget(self.export_log_btn)
 
         self.clear_log_btn = QPushButton("Limpar")
         self.clear_log_btn.setIcon(get_svg_icon("trash", "#94A3B8", 16))
         self.clear_log_btn.setMinimumHeight(38)
-        self.clear_log_btn.setStyleSheet("background-color: #1E293B; border: 1px solid #334155; color: #94A3B8;")
         btn_layout.addWidget(self.clear_log_btn)
 
         self.open_folder_btn = QPushButton("Abrir Pasta")
         self.open_folder_btn.setIcon(get_svg_icon("folder", "#94A3B8", 16))
         self.open_folder_btn.setMinimumHeight(38)
-        self.open_folder_btn.setStyleSheet("background-color: #1E293B; border: 1px solid #334155; color: #94A3B8;")
         btn_layout.addWidget(self.open_folder_btn)
 
         layout.addLayout(btn_layout)
@@ -168,7 +155,7 @@ class DownloadsTab(QWidget):
         log_tools_layout.setSpacing(10)
 
         self.log_counter = QLabel("Eventos: 0")
-        self.log_counter.setStyleSheet("font-size: 12px; font-weight: 700; color: #94A3B8;")
+        self.log_counter.setStyleSheet("font-size: 12px; font-weight: 700; opacity: 0.8;")
         log_tools_layout.addWidget(self.log_counter)
 
         log_tools_layout.addStretch()
@@ -176,21 +163,6 @@ class DownloadsTab(QWidget):
         # Phase Filter Dropdown
         self.phase_filter = QComboBox()
         self.phase_filter.setFixedHeight(32)
-        self.phase_filter.setStyleSheet("""
-            QComboBox {
-                background-color: #1E293B;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 2px 10px;
-                color: #F8FAFC;
-                font-size: 12px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #1E293B;
-                selection-background-color: #4F46E5;
-                color: #F8FAFC;
-            }
-        """)
         self.phase_filter.addItems([
             "Todas as Fases",
             "Sucesso",
@@ -225,22 +197,14 @@ class DownloadsTab(QWidget):
         self.log_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.log_table.setStyleSheet("""
             QTableWidget {
-                background-color: #0B1120;
-                border: 1px solid #1E293B;
+                border: 1px solid rgba(148, 163, 184, 0.2);
                 border-radius: 8px;
-                gridline-color: #1E293B;
                 font-size: 12px;
             }
             QTableWidget::item {
-                padding: 4px 8px;
-                color: #F1F5F9;
-            }
-            QTableWidget::item:selected {
-                background-color: #1E293B;
+                padding: 5px 8px;
             }
             QHeaderView::section {
-                background-color: #1E293B;
-                color: #94A3B8;
                 font-weight: 700;
                 border: none;
                 padding: 6px 10px;
@@ -276,12 +240,12 @@ class DownloadsTab(QWidget):
         is_paused = m.get("paused", False)
         if is_paused:
             self.pause_btn.setText("Retomar")
-            self.pause_btn.setIcon(get_svg_icon("play", "#F1F5F9", 16))
+            self.pause_btn.setIcon(get_svg_icon("play", "#FFFFFF", 16))
             self.pause_btn.setStyleSheet("background-color: #0284C7; color: #FFFFFF; font-weight: 700;")
         else:
             self.pause_btn.setText("Pausar")
-            self.pause_btn.setIcon(get_svg_icon("pause", "#F1F5F9", 16))
-            self.pause_btn.setStyleSheet("background-color: #334155; color: #F1F5F9;")
+            self.pause_btn.setIcon(get_svg_icon("pause", "#FFFFFF", 16))
+            self.pause_btn.setStyleSheet("")
 
     @pyqtSlot(dict)
     def add_log_entry(self, event: dict):
@@ -323,7 +287,7 @@ class DownloadsTab(QWidget):
             "download": ("DOWNLOAD", "#60A5FA"),
             "success": ("SUCESSO", "#34D399"),
             "retry": ("RETENTATIVA", "#FB923C"),
-            "error": ("ERRO", "#F87171"),
+            "error": ("ERRO", "#EF4444"),
             "info": ("INFO", "#94A3B8")
         }
         return badges.get(phase_type, ("INFO", "#94A3B8"))
@@ -344,7 +308,6 @@ class DownloadsTab(QWidget):
             msg_text = msg_item.text().lower() if msg_item else ""
             details_text = details_item.text().lower() if details_item else ""
 
-            # Filtro por Fase
             phase_match = True
             if phase == "Sucesso":
                 phase_match = "SUCESSO" in badge_text
@@ -359,7 +322,6 @@ class DownloadsTab(QWidget):
             elif phase == "Erros & Avisos":
                 phase_match = "ERRO" in badge_text or "RETENTATIVA" in badge_text
 
-            # Filtro por Busca de Texto
             search_match = True
             if query:
                 search_match = (query in msg_text) or (query in details_text)

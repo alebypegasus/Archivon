@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSlot, QFileSystemWatcher, QSize
 from PyQt6.QtGui import QPixmap, QImage, QColor
 from utils.config import load_config
 from utils.icons import get_svg_icon
+from utils.theme import get_theme_colors, get_current_theme_name
 
 class LibraryTab(QWidget):
     def __init__(self, download_manager=None):
@@ -24,24 +25,22 @@ class LibraryTab(QWidget):
         header_layout = QHBoxLayout()
         title_box = QVBoxLayout()
         title = QLabel("Biblioteca & Acervo Organizado")
-        title.setStyleSheet("font-size: 22px; font-weight: 800; color: #F8FAFC;")
+        title.setStyleSheet("font-size: 22px; font-weight: 800;")
         
         self.stats_label = QLabel("Carregando acervo...")
-        self.stats_label.setStyleSheet("font-size: 12.5px; color: #94A3B8;")
+        self.stats_label.setStyleSheet("font-size: 12.5px; opacity: 0.75;")
         title_box.addWidget(title)
         title_box.addWidget(self.stats_label)
         header_layout.addLayout(title_box)
         header_layout.addStretch()
 
         self.export_catalog_btn = QPushButton("Exportar Catálogo")
-        self.export_catalog_btn.setIcon(get_svg_icon("export", "#F1F5F9", 16))
-        self.export_catalog_btn.setStyleSheet("background-color: #1E293B; border: 1px solid #334155; color: #F1F5F9; padding: 6px 14px;")
+        self.export_catalog_btn.setIcon(get_svg_icon("export", "#FFFFFF", 16))
         self.export_catalog_btn.clicked.connect(self.export_catalog)
         header_layout.addWidget(self.export_catalog_btn)
 
         self.refresh_btn = QPushButton("Atualizar")
-        self.refresh_btn.setIcon(get_svg_icon("refresh", "#F1F5F9", 16))
-        self.refresh_btn.setStyleSheet("background-color: #334155; color: #F1F5F9; padding: 6px 14px;")
+        self.refresh_btn.setIcon(get_svg_icon("refresh", "#FFFFFF", 16))
         self.refresh_btn.clicked.connect(self.refresh_list)
         header_layout.addWidget(self.refresh_btn)
 
@@ -58,7 +57,7 @@ class LibraryTab(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setStyleSheet("""
             QSplitter::handle {
-                background-color: #334155;
+                background-color: rgba(148, 163, 184, 0.2);
                 width: 2px;
             }
         """)
@@ -74,27 +73,17 @@ class LibraryTab(QWidget):
         self.tree_widget.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.tree_widget.setStyleSheet("""
             QTreeWidget {
-                background-color: #1E293B;
-                border: 1px solid #334155;
+                border: 1px solid rgba(148, 163, 184, 0.2);
                 border-radius: 8px;
                 padding: 6px;
                 font-size: 13px;
             }
             QTreeWidget::item {
-                height: 30px;
+                height: 32px;
                 padding: 2px 4px;
                 border-radius: 4px;
             }
-            QTreeWidget::item:hover {
-                background-color: #334155;
-            }
-            QTreeWidget::item:selected {
-                background-color: #4F46E5;
-                color: #FFFFFF;
-            }
             QHeaderView::section {
-                background-color: #0F172A;
-                color: #94A3B8;
                 font-weight: 700;
                 border: none;
                 padding: 6px 10px;
@@ -107,12 +96,11 @@ class LibraryTab(QWidget):
 
         # Right Container: Book Inspector Panel
         self.right_panel = QFrame()
+        self.right_panel.setObjectName("inspectorCard")
         self.right_panel.setStyleSheet("""
-            QFrame {
-                background-color: #1E293B;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 12px;
+            QFrame#inspectorCard {
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 10px;
             }
         """)
         right_layout = QVBoxLayout(self.right_panel)
@@ -120,21 +108,21 @@ class LibraryTab(QWidget):
         right_layout.setSpacing(12)
 
         self.inspector_title = QLabel("Detalhes da Obra")
-        self.inspector_title.setStyleSheet("font-size: 14px; font-weight: 800; color: #94A3B8; text-transform: uppercase;")
+        self.inspector_title.setStyleSheet("font-size: 13px; font-weight: 800; text-transform: uppercase; opacity: 0.8;")
         right_layout.addWidget(self.inspector_title)
 
         # Cover Thumbnail
         self.cover_label = QLabel()
         self.cover_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.cover_label.setFixedHeight(210)
-        self.cover_label.setStyleSheet("background-color: #0F172A; border-radius: 6px; border: 1px dashed #334155;")
+        self.cover_label.setStyleSheet("border-radius: 8px; border: 1px dashed rgba(148, 163, 184, 0.3);")
         self.cover_label.setText("Selecione um livro para pré-visualizar")
         right_layout.addWidget(self.cover_label)
 
         # Meta fields
         self.book_title_label = QLabel("Nenhum livro selecionado")
         self.book_title_label.setWordWrap(True)
-        self.book_title_label.setStyleSheet("font-size: 16px; font-weight: 800; color: #F8FAFC;")
+        self.book_title_label.setStyleSheet("font-size: 16px; font-weight: 800;")
         right_layout.addWidget(self.book_title_label)
 
         self.book_cat_label = QLabel("Categoria: —")
@@ -142,7 +130,7 @@ class LibraryTab(QWidget):
         right_layout.addWidget(self.book_cat_label)
 
         self.book_pages_label = QLabel("Páginas: — | Tamanho: —")
-        self.book_pages_label.setStyleSheet("font-size: 12px; color: #94A3B8;")
+        self.book_pages_label.setStyleSheet("font-size: 12px; opacity: 0.75;")
         right_layout.addWidget(self.book_pages_label)
 
         # Action Buttons in Inspector
@@ -157,9 +145,8 @@ class LibraryTab(QWidget):
         insp_btn_layout.addWidget(self.open_pdf_btn)
 
         self.reveal_btn = QPushButton("Revelar no Finder")
-        self.reveal_btn.setIcon(get_svg_icon("folder", "#F1F5F9", 16))
+        self.reveal_btn.setIcon(get_svg_icon("folder", "#FFFFFF", 16))
         self.reveal_btn.setFixedHeight(36)
-        self.reveal_btn.setStyleSheet("background-color: #334155; color: #F1F5F9;")
         self.reveal_btn.setEnabled(False)
         self.reveal_btn.clicked.connect(self.reveal_selected_finder)
         insp_btn_layout.addWidget(self.reveal_btn)
@@ -167,7 +154,6 @@ class LibraryTab(QWidget):
         self.copy_path_btn = QPushButton("Copiar Caminho do Arquivo")
         self.copy_path_btn.setIcon(get_svg_icon("copy", "#94A3B8", 16))
         self.copy_path_btn.setFixedHeight(36)
-        self.copy_path_btn.setStyleSheet("background-color: #1E293B; border: 1px solid #334155; color: #94A3B8;")
         self.copy_path_btn.setEnabled(False)
         self.copy_path_btn.clicked.connect(self.copy_selected_path)
         insp_btn_layout.addWidget(self.copy_path_btn)
@@ -217,7 +203,7 @@ class LibraryTab(QWidget):
 
         entries = sorted(os.listdir(out_folder))
         folder_icon = get_svg_icon("folder", "#38BDF8", 16)
-        book_icon = get_svg_icon("book", "#A5B4FC", 16)
+        book_icon = get_svg_icon("book", "#818CF8", 16)
 
         for entry in entries:
             full_entry_path = os.path.join(out_folder, entry)
@@ -309,10 +295,10 @@ class LibraryTab(QWidget):
                         pixmap = QPixmap.fromImage(img)
                         scaled_pixmap = pixmap.scaled(180, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                         self.cover_label.setPixmap(scaled_pixmap)
-                        self.cover_label.setStyleSheet("background-color: #0F172A; border-radius: 6px; border: 1px solid #4F46E5;")
+                        self.cover_label.setStyleSheet("border-radius: 8px; border: 1px solid #4F46E5;")
             except Exception as e:
                 self.cover_label.setText("Capa indisponível")
-                self.cover_label.setStyleSheet("background-color: #0F172A; border-radius: 6px; border: 1px dashed #334155;")
+                self.cover_label.setStyleSheet("border-radius: 8px; border: 1px dashed rgba(148, 163, 184, 0.3);")
         else:
             self.selected_file_path = None
             self.open_pdf_btn.setEnabled(False)
@@ -377,15 +363,14 @@ class LibraryTab(QWidget):
                     writer.writeheader()
                     writer.writerows(books_data)
             else:
-                # Gera relatório em HTML moderno
                 rows_html = ""
                 for idx, b in enumerate(books_data, 1):
                     rows_html += f"""
                     <tr>
-                        <td style='padding:10px; border-bottom:1px solid #334155;'>{idx}</td>
-                        <td style='padding:10px; border-bottom:1px solid #334155; font-weight:bold;'>{b['title']}</td>
-                        <td style='padding:10px; border-bottom:1px solid #334155;'><span style='background:#4F46E5; color:#fff; padding:3px 8px; border-radius:4px;'>{b['category']}</span></td>
-                        <td style='padding:10px; border-bottom:1px solid #334155;'>{b['size']}</td>
+                        <td style='padding:10px; border-bottom:1px solid rgba(148, 163, 184, 0.2);'>{idx}</td>
+                        <td style='padding:10px; border-bottom:1px solid rgba(148, 163, 184, 0.2); font-weight:bold;'>{b['title']}</td>
+                        <td style='padding:10px; border-bottom:1px solid rgba(148, 163, 184, 0.2);'><span style='background:#4F46E5; color:#fff; padding:3px 8px; border-radius:4px;'>{b['category']}</span></td>
+                        <td style='padding:10px; border-bottom:1px solid rgba(148, 163, 184, 0.2);'>{b['size']}</td>
                     </tr>
                     """
                 html_content = f"""

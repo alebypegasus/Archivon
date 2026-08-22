@@ -13,8 +13,13 @@ pip install pyinstaller -q
 
 rm -rf build dist
 
+ICON_FLAG=""
+if [ -f "assets/icon.icns" ]; then
+    ICON_FLAG="--icon assets/icon.icns"
+fi
+
 echo "📦 Empacotando com PyInstaller..."
-pyinstaller --noconfirm --windowed \
+pyinstaller --noconfirm --windowed $ICON_FLAG \
     --name "Archivon" \
     --add-data "archivon_py:archivon_py" \
     --hidden-import "PyQt6.QtSvg" \
