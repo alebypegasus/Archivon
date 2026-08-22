@@ -1,0 +1,78 @@
+name: Multiplatform Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: Archivon-macOS.dmg
+            build_script: |
+              pip install -r requirements.txt pyinstaller
+              chmod +x build_macos.sh
+              ./build_macos.sh
+            asset_path: dist/Archivon-macOS.dmg
+
+          - os: windows-latest
+            artifact_name: Archivon-Windows.exe
+            build_script: |
+              pip install -r requirements.txt pyinstaller
+              pyinstaller --noconfirm --windowed --onefile --name "Archivon-Windows" --add-data "archivon_py;archivon_py" --hidden-import "PyQt6.QtSvg" --hidden-import "pymupdf" --hidden-import "google.generativeai" --hidden-import "gdown" archivon_py/main.py
+            asset_path: dist/Archivon-Windows.exe
+
+          - os: ubuntu-latest
+            artifact_name: Archivon-Linux-x86_64.tar.gz
+            build_script: |
+              sudo apt-get update && sudo apt-get install -y libgl1-mesa-glx libegl1-mesa
+              pip install -r requirements.txt pyinstaller
+              chmod +x build_linux.sh
+              ./build_linux.sh
+            asset_path: dist/Archivon-Linux-x86_64.tar.gz
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build Application
+        run: ${{ matrix.build_script }}
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.asset_path }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_assets/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true

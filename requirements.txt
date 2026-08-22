@@ -1,0 +1,7 @@
+PyQt6
+pymupdf
+google-generativeai
+requests
+python-dotenv
+pyinstaller>=6.22.1
+gdown
