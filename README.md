@@ -15,14 +15,14 @@ O **Archivon** é um aplicativo desktop autônomo para download massivo, convers
 
 Não é necessário instalar Python ou clonar código. Basta baixar o instalador pronto para o seu sistema:
 
-👉 **[Clique aqui para acessar a Página Oficial de Releases](https://github.com/alebypegasus/Archivon/releases/latest)**
+👉 **[Clique aqui para acessar a Página Oficial de Releases](https://github.com/alebypegasus/Archivon/releases/tag/v3.5.0)**
 
 ### 📦 Escolha o seu Sistema:
 
 | Sistema Operacional | Arquitetura | Arquivo de Download | Instruções de Instalação |
 | :--- | :--- | :--- | :--- |
-| 🍏 **macOS (Apple Silicon)** | **M1, M2, M3, M4** | [**`Archivon-macOS-AppleSilicon.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-macOS-AppleSilicon-M1-M2-M3.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
-| 🍏 **macOS (Intel)** | **Processadores Intel (Core i5/i7/i9)** | [**`Archivon-macOS-Intel.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-macOS-Intel.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
+| 🍏 **macOS (Intel)** | **Processadores Intel (Core i5 / i7 / i9)** | [**`Archivon-macOS-Intel.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-macOS-Intel.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
+| 🍏 **macOS (Apple Silicon)** | **M1, M2, M3, M4** | [**`Archivon-macOS.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-macOS.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
 | 🪟 **Windows** | **64-bit (Windows 10 / 11)** | [**`Archivon-Windows.exe`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-Windows.exe) | Dê dois cliques no executável para abrir o aplicativo diretamente. |
 | 🐧 **Linux** | **x86_64 (Ubuntu, Debian, Fedora)** | [**`Archivon-Linux-x86_64.tar.gz`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-Linux-x86_64.tar.gz) | Extraia o arquivo e execute o binário `Archivon`. |
 
