@@ -11,20 +11,31 @@ permissions:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
+    name: Build on ${{ matrix.os }} (${{ matrix.arch_label }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - os: macos-latest
-            artifact_name: Archivon-macOS.dmg
+          - os: macos-14
+            arch_label: Apple-Silicon-M1-M2-M3
+            artifact_name: Archivon-macOS-AppleSilicon-M1-M2-M3.dmg
             build_script: |
               pip install -r requirements.txt pyinstaller
               chmod +x build_macos.sh
-              ./build_macos.sh
-            asset_path: dist/Archivon-macOS.dmg
+              ./build_macos.sh AppleSilicon-M1-M2-M3
+            asset_path: dist/Archivon-macOS-AppleSilicon-M1-M2-M3.dmg
+
+          - os: macos-13
+            arch_label: Intel-x86_64
+            artifact_name: Archivon-macOS-Intel.dmg
+            build_script: |
+              pip install -r requirements.txt pyinstaller
+              chmod +x build_macos.sh
+              ./build_macos.sh Intel
+            asset_path: dist/Archivon-macOS-Intel.dmg
 
           - os: windows-latest
+            arch_label: Windows-x64
             artifact_name: Archivon-Windows.exe
             build_script: |
               pip install -r requirements.txt pyinstaller
@@ -32,6 +43,7 @@ jobs:
             asset_path: dist/Archivon-Windows.exe
 
           - os: ubuntu-latest
+            arch_label: Linux-x86_64
             artifact_name: Archivon-Linux-x86_64.tar.gz
             build_script: |
               sudo apt-get update && sudo apt-get install -y libgl1 libegl1 libxkbcommon-x11-0 libdbus-1-3

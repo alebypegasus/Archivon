@@ -1,18 +1,16 @@
 #!/bin/bash
-# Script de Build do Archivon para macOS (Standalone App + DMG)
+# Script de Build do Archivon para macOS (Universal / Nativo)
 set -e
 
-echo "🔨 Iniciando compilação do Archivon para macOS..."
+ARCH_NAME=$(uname -m)
+echo "🔨 Iniciando compilação do Archivon para macOS (Arquitetura: $ARCH_NAME)..."
 
-# Ativa venv se existir
 if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
-# Instala pyinstaller se necessário
 pip install pyinstaller -q
 
-# Limpa builds anteriores
 rm -rf build dist
 
 echo "📦 Empacotando com PyInstaller..."
@@ -25,13 +23,18 @@ pyinstaller --noconfirm --windowed \
     --hidden-import "gdown" \
     archivon_py/main.py
 
-echo "💿 Criando imagem de disco DMG..."
+DMG_OUTPUT="dist/Archivon-macOS.dmg"
+if [ "$1" != "" ]; then
+    DMG_OUTPUT="dist/Archivon-macOS-$1.dmg"
+fi
+
+echo "💿 Criando imagem de disco DMG ($DMG_OUTPUT)..."
 if command -v hdiutil &> /dev/null; then
-    hdiutil create -volname "Archivon" -srcfolder "dist/Archivon.app" -ov -format UDZO "dist/Archivon-macOS.dmg"
-    echo "✅ DMG criado com sucesso em: dist/Archivon-macOS.dmg"
+    hdiutil create -volname "Archivon" -srcfolder "dist/Archivon.app" -ov -format UDZO "$DMG_OUTPUT"
+    echo "✅ DMG criado com sucesso em: $DMG_OUTPUT"
 else
     cd dist && zip -r "Archivon-macOS.zip" "Archivon.app" && cd ..
     echo "✅ Zip criado em: dist/Archivon-macOS.zip"
 fi
 
-echo "🎉 Build concluído com sucesso!"
+echo "🎉 Build macOS concluído com sucesso!"
