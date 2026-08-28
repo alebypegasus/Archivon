@@ -53,10 +53,8 @@ pyz = PYZ(a.pure)
 icon_path = None
 if sys.platform == 'darwin' and os.path.exists('assets/icon.icns'):
     icon_path = ['assets/icon.icns']
-elif sys.platform.startswith('win') and os.path.exists('assets/icon.ico'):
+elif (sys.platform.startswith('win') or os.name == 'nt') and os.path.exists('assets/icon.ico'):
     icon_path = ['assets/icon.ico']
-elif os.path.exists('assets/icon.png'):
-    icon_path = ['assets/icon.png']
 
 exe = EXE(
     pyz,

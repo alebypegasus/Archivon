@@ -5,3 +5,4 @@ requests
 python-dotenv
 pyinstaller>=6.22.1
 gdown
+pillow
