@@ -20,6 +20,7 @@ jobs:
           # macOS Apple Silicon (M1, M2, M3, M4)
           - os: macos-14
             arch_label: AppleSilicon
+            python_arch: arm64
             artifact_name: Archivon-macOS-AppleSilicon.dmg
             build_script: |
               pip install -r requirements.txt pyinstaller
@@ -27,9 +28,21 @@ jobs:
               ./build_macos.sh AppleSilicon
             asset_path: dist/Archivon-macOS-AppleSilicon.dmg
 
+          # macOS Intel (x86_64 via Rosetta)
+          - os: macos-14
+            arch_label: Intel-x86_64
+            python_arch: x64
+            artifact_name: Archivon-macOS-Intel.dmg
+            build_script: |
+              pip install -r requirements.txt pyinstaller
+              chmod +x build_macos.sh
+              ./build_macos.sh Intel
+            asset_path: dist/Archivon-macOS-Intel.dmg
+
           # Windows 64-bit
           - os: windows-latest
             arch_label: Windows-x64
+            python_arch: x64
             artifact_name: Archivon-Windows.exe
             build_script: |
               pip install -r requirements.txt pyinstaller
@@ -39,6 +52,7 @@ jobs:
           # Linux 64-bit
           - os: ubuntu-latest
             arch_label: Linux-x86_64
+            python_arch: x64
             artifact_name: Archivon-Linux-x86_64.tar.gz
             build_script: |
               sudo apt-get update && sudo apt-get install -y libgl1 libegl1 libxkbcommon-x11-0 libdbus-1-3
@@ -55,6 +69,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          architecture: ${{ matrix.python_arch }}
           cache: 'pip'
 
       - name: Build Application
