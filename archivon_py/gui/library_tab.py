@@ -1,5 +1,4 @@
 import os
-import subprocess
 import csv
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem, QPushButton,
@@ -11,6 +10,7 @@ from PyQt6.QtGui import QPixmap, QImage, QColor
 from utils.config import load_config
 from utils.icons import get_svg_icon
 from utils.theme import get_theme_colors, get_current_theme_name
+from utils.platform_utils import open_file_or_folder, reveal_in_file_manager
 
 class LibraryTab(QWidget):
     def __init__(self, download_manager=None):
@@ -144,7 +144,7 @@ class LibraryTab(QWidget):
         self.open_pdf_btn.clicked.connect(self.open_selected_pdf)
         insp_btn_layout.addWidget(self.open_pdf_btn)
 
-        self.reveal_btn = QPushButton("Revelar no Finder")
+        self.reveal_btn = QPushButton("Revelar na Pasta")
         self.reveal_btn.setIcon(get_svg_icon("folder", "#FFFFFF", 16))
         self.reveal_btn.setFixedHeight(36)
         self.reveal_btn.setEnabled(False)
@@ -188,7 +188,7 @@ class LibraryTab(QWidget):
     def refresh_list(self):
         self.tree_widget.clear()
         config_data = load_config()
-        out_folder = os.path.abspath(config_data.get("output_folder", "Biblioteca"))
+        out_folder = os.path.abspath(config_data.get("output_folder", os.path.expanduser("~/Documents/Archivon_Biblioteca")))
         
         if not os.path.exists(out_folder):
             self.stats_label.setText(f"Pasta de destino não encontrada: {out_folder}")
@@ -201,7 +201,11 @@ class LibraryTab(QWidget):
         total_books = 0
         categories_count = 0
 
-        entries = sorted(os.listdir(out_folder))
+        try:
+            entries = sorted(os.listdir(out_folder))
+        except Exception:
+            entries = []
+
         folder_icon = get_svg_icon("folder", "#38BDF8", 16)
         book_icon = get_svg_icon("book", "#818CF8", 16)
 
@@ -220,10 +224,18 @@ class LibraryTab(QWidget):
                 cat_item.setExpanded(True)
                 cat_books = 0
                 
-                for file_name in sorted(os.listdir(full_entry_path)):
+                try:
+                    cat_files = sorted(os.listdir(full_entry_path))
+                except Exception:
+                    cat_files = []
+
+                for file_name in cat_files:
                     if file_name.lower().endswith(".pdf"):
                         file_path = os.path.join(full_entry_path, file_name)
-                        file_size = self._format_size(os.path.getsize(file_path))
+                        try:
+                            file_size = self._format_size(os.path.getsize(file_path))
+                        except Exception:
+                            file_size = "—"
                         
                         book_item = QTreeWidgetItem(cat_item, [file_name, file_size])
                         book_item.setIcon(0, book_icon)
@@ -239,7 +251,10 @@ class LibraryTab(QWidget):
                     self.tree_widget.takeTopLevelItem(self.tree_widget.indexOfTopLevelItem(cat_item))
                     
             elif entry.lower().endswith(".pdf"):
-                file_size = self._format_size(os.path.getsize(full_entry_path))
+                try:
+                    file_size = self._format_size(os.path.getsize(full_entry_path))
+                except Exception:
+                    file_size = "—"
                 book_item = QTreeWidgetItem(self.tree_widget, [entry, file_size])
                 book_item.setIcon(0, book_icon)
                 book_item.setData(0, Qt.ItemDataRole.UserRole, full_entry_path)
@@ -313,15 +328,15 @@ class LibraryTab(QWidget):
     def on_item_double_clicked(self, item, column):
         path = item.data(0, Qt.ItemDataRole.UserRole)
         if path and os.path.exists(path):
-            subprocess.run(["open", path])
+            open_file_or_folder(path)
 
     def open_selected_pdf(self):
         if self.selected_file_path and os.path.exists(self.selected_file_path):
-            subprocess.run(["open", self.selected_file_path])
+            open_file_or_folder(self.selected_file_path)
 
     def reveal_selected_finder(self):
         if self.selected_file_path and os.path.exists(self.selected_file_path):
-            subprocess.run(["open", "-R", self.selected_file_path])
+            reveal_in_file_manager(self.selected_file_path)
 
     def copy_selected_path(self):
         if self.selected_file_path:
@@ -330,7 +345,7 @@ class LibraryTab(QWidget):
 
     def export_catalog(self):
         config_data = load_config()
-        out_folder = os.path.abspath(config_data.get("output_folder", "Biblioteca"))
+        out_folder = os.path.abspath(config_data.get("output_folder", os.path.expanduser("~/Documents/Archivon_Biblioteca")))
 
         if not os.path.exists(out_folder):
             QMessageBox.warning(self, "Aviso", "A pasta da biblioteca não foi encontrada.")

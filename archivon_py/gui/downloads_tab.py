@@ -1,5 +1,4 @@
 import os
-import subprocess
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout,
     QFrame, QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QMessageBox,
@@ -9,6 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QColor, QFont
 from utils.icons import get_svg_icon
 from utils.theme import get_theme_colors, get_current_theme_name
+from utils.platform_utils import open_file_or_folder
 
 class DropTextEdit(QTextEdit):
     def __init__(self, parent=None):
@@ -339,7 +339,7 @@ class DownloadsTab(QWidget):
         if msg_item:
             file_path = msg_item.data(Qt.ItemDataRole.UserRole)
             if file_path and os.path.exists(file_path):
-                subprocess.run(["open", file_path])
+                open_file_or_folder(file_path)
 
     def clear_logs(self):
         self.log_table.setRowCount(0)
@@ -392,6 +392,6 @@ class DownloadsTab(QWidget):
     def on_open_folder_clicked(self):
         from utils.config import load_config
         config = load_config()
-        out_folder = os.path.abspath(config.get("output_folder", "Biblioteca"))
+        out_folder = os.path.abspath(config.get("output_folder", os.path.expanduser("~/Documents/Archivon_Biblioteca")))
         os.makedirs(out_folder, exist_ok=True)
-        subprocess.run(["open", out_folder])
+        open_file_or_folder(out_folder)

@@ -9,6 +9,7 @@ import hashlib
 from PyQt6.QtCore import QObject, pyqtSignal
 
 import requests
+from utils.config import load_config, get_soffice_binary
 
 class DownloadManager(QObject):
     status_update = pyqtSignal(str)
@@ -219,14 +220,11 @@ class DownloadManager(QObject):
     def _processor_worker(self):
         from core.pdf_sanitizer import PDFSanitizer
         from core.ai_categorizer import AICategorizer
-        from utils.config import load_config
         
-        config = load_config()
         sanitizer = PDFSanitizer()
-        categorizer = AICategorizer(
-            api_key=config.get("gemini_api_key", ""),
-            preferred_model=config.get("gemini_model", "")
-        )
+        categorizer = None
+        last_key = None
+        last_model = None
 
         while True:
             self.running_event.wait()
@@ -245,6 +243,18 @@ class DownloadManager(QObject):
 
             try:
                 fresh_config = load_config()
+                curr_key = fresh_config.get("gemini_api_key", "")
+                curr_model = fresh_config.get("gemini_model", "")
+
+                # Atualiza dinamicamente o categorizador caso a chave ou modelo tenham sido alterados
+                if categorizer is None or curr_key != last_key or curr_model != last_model:
+                    categorizer = AICategorizer(
+                        api_key=curr_key,
+                        preferred_model=curr_model
+                    )
+                    last_key = curr_key
+                    last_model = curr_model
+
                 self._process_task(filepath, sanitizer, categorizer, fresh_config)
             except Exception as e:
                 self._emit_log("error", f"Falha no processamento ({os.path.basename(filepath)})", str(e))
@@ -258,9 +268,8 @@ class DownloadManager(QObject):
                 self._check_completion()
 
     def _download_task(self, link):
-        from utils.config import load_config
         config = load_config()
-        temp_dir = os.path.abspath(config.get("temp_folder", "temp"))
+        temp_dir = os.path.abspath(config.get("temp_folder", os.path.expanduser("~/Downloads/Archivon_Temp")))
         cookies_file = config.get("cookies_file", "").strip()
         use_cookies = bool(cookies_file and os.path.exists(cookies_file))
         
@@ -272,22 +281,17 @@ class DownloadManager(QObject):
             
             if "drive.google.com" in link:
                 import gdown
-                orig_cwd = os.getcwd()
-                os.chdir(temp_dir)
-                try:
-                    if "/folders/" in link:
-                        self._emit_log("download", f"Baixando pasta do Google Drive...", link)
-                        if use_cookies:
-                            gdown.download_folder(link, quiet=True, use_cookies=True, proxy=None)
-                        else:
-                            gdown.download_folder(link, quiet=True, use_cookies=False)
+                if "/folders/" in link:
+                    self._emit_log("download", f"Baixando pasta do Google Drive...", link)
+                    if use_cookies:
+                        gdown.download_folder(link, output=temp_dir, quiet=True, use_cookies=True, proxy=None)
                     else:
-                        if use_cookies:
-                            gdown.download(link, quiet=True, fuzzy=True, use_cookies=True)
-                        else:
-                            gdown.download(link, quiet=True, fuzzy=True, use_cookies=False)
-                finally:
-                    os.chdir(orig_cwd)
+                        gdown.download_folder(link, output=temp_dir, quiet=True, use_cookies=False)
+                else:
+                    if use_cookies:
+                        gdown.download(link, output=temp_dir, quiet=True, fuzzy=True, use_cookies=True)
+                    else:
+                        gdown.download(link, output=temp_dir, quiet=True, fuzzy=True, use_cookies=False)
                     
             elif any(link.lower().endswith(ext) for ext in [".pdf", ".docx", ".doc", ".pptx", ".ppt"]):
                 filename = link.split("/")[-1].split("?")[0]
@@ -295,7 +299,7 @@ class DownloadManager(QObject):
                     filename = f"download_{int(time.time())}.pdf"
                 dest_path = os.path.join(temp_dir, filename)
                 
-                headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0'}
                 response = requests.get(link, stream=True, headers=headers, timeout=30)
                 response.raise_for_status()
                 with open(dest_path, "wb") as f:
@@ -308,12 +312,7 @@ class DownloadManager(QObject):
                 self._emit_log("download", f"Download concluído: {filename}", "Enviado para a esteira", dest_path)
             else:
                 import gdown
-                orig_cwd = os.getcwd()
-                os.chdir(temp_dir)
-                try:
-                    gdown.download(link, quiet=True, fuzzy=True, use_cookies=use_cookies)
-                finally:
-                    os.chdir(orig_cwd)
+                gdown.download(link, output=temp_dir, quiet=True, fuzzy=True, use_cookies=use_cookies)
 
         except Exception as e:
             retries = self.retry_counts.get(link, 0)
@@ -327,53 +326,8 @@ class DownloadManager(QObject):
                 with self.active_tasks_lock:
                     self.error_count += 1
 
-    def _get_soffice_binary(self, config: dict) -> str | None:
-        custom_path = config.get("soffice_path", "").strip()
-        if custom_path and os.path.exists(custom_path):
-            return custom_path
-
-        # 1. Procura no PATH do sistema operacional
-        soffice_bin = shutil.which("soffice")
-        if soffice_bin:
-            return soffice_bin
-
-        # 2. Caminhos padrão macOS
-        mac_paths = [
-            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-            os.path.expanduser("~/Applications/LibreOffice.app/Contents/MacOS/soffice"),
-            os.path.join(os.getcwd(), "LibreOffice.app/Contents/MacOS/soffice")
-        ]
-        for p in mac_paths:
-            if os.path.exists(p):
-                return p
-
-        # 3. Caminhos padrão Windows
-        win_paths = [
-            r"C:\Program Files\LibreOffice\program\soffice.exe",
-            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-            os.path.join(os.getcwd(), "LibreOffice", "program", "soffice.exe"),
-            os.path.join(os.getcwd(), "libreoffice", "program", "soffice.exe"),
-            os.path.join(os.path.dirname(os.getcwd()), "LibreOffice", "program", "soffice.exe")
-        ]
-        for p in win_paths:
-            if os.path.exists(p):
-                return p
-
-        # 4. Caminhos padrão Linux
-        linux_paths = [
-            "/usr/bin/soffice",
-            "/usr/local/bin/soffice",
-            "/usr/lib/libreoffice/program/soffice",
-            "/opt/libreoffice/program/soffice"
-        ]
-        for p in linux_paths:
-            if os.path.exists(p):
-                return p
-
-        return None
-
     def _convert_to_pdf(self, input_path: str, temp_dir: str, config: dict) -> str:
-        soffice_bin = self._get_soffice_binary(config)
+        soffice_bin = get_soffice_binary(config)
         if not soffice_bin:
             raise FileNotFoundError("LibreOffice (soffice) não foi detectado no sistema ou pasta local.")
 
@@ -397,9 +351,12 @@ class DownloadManager(QObject):
             for f in files:
                 if f.lower().endswith(".pdf"):
                     existing_path = os.path.join(root, f)
-                    if os.path.getsize(existing_path) == temp_size:
-                        if self._compute_sha256(existing_path) == temp_hash:
-                            return existing_path
+                    try:
+                        if os.path.getsize(existing_path) == temp_size:
+                            if self._compute_sha256(existing_path) == temp_hash:
+                                return existing_path
+                    except Exception:
+                        pass
         return None
 
     def _process_task(self, filepath, sanitizer, categorizer, config):
@@ -410,8 +367,8 @@ class DownloadManager(QObject):
 
         filename = os.path.basename(filepath)
         ext = os.path.splitext(filename)[1].lower()
-        temp_dir = os.path.abspath(config.get("temp_folder", "temp"))
-        output_dir = os.path.abspath(config.get("output_folder", "Biblioteca"))
+        temp_dir = os.path.abspath(config.get("temp_folder", os.path.expanduser("~/Downloads/Archivon_Temp")))
+        output_dir = os.path.abspath(config.get("output_folder", os.path.expanduser("~/Documents/Archivon_Biblioteca")))
         compress_pdf = config.get("compress_pdf", True)
         os.makedirs(output_dir, exist_ok=True)
 
@@ -456,7 +413,7 @@ class DownloadManager(QObject):
 
             # 4. Categorização com IA (com suporte a Gemini Vision se escaneado)
             self._emit_log("ai", f"Analisando metadados com IA: {pdf_name}")
-            meta = categorizer.categorize_pdf(clean_temp)
+            meta = categorizer.categorize_pdf(clean_temp) if categorizer else {}
             
             titulo = meta.get("titulo", os.path.splitext(pdf_name)[0]).strip()
             autor = meta.get("autor", "Desconhecido").strip()

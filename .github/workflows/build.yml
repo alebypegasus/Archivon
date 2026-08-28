@@ -30,7 +30,7 @@ jobs:
         
     - name: Build with PyInstaller
       run: |
-        pyinstaller --noconfirm --windowed --name "Archivon" archivon_py/main.py
+        pyinstaller Archivon.spec
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

@@ -2,12 +2,28 @@ import os
 import shutil
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QLineEdit, QFormLayout, QPushButton, QHBoxLayout,
-    QFileDialog, QMessageBox, QComboBox, QFrame, QCheckBox
+    QFileDialog, QMessageBox, QComboBox, QFrame, QCheckBox, QApplication
 )
-from PyQt6.QtCore import Qt
-from utils.config import load_config, save_config
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from utils.config import load_config, save_config, get_soffice_binary
 from utils.icons import get_svg_icon
 from utils.theme import get_theme_colors, get_current_theme_name
+
+class APITestWorker(QThread):
+    finished = pyqtSignal(bool, str, list)
+
+    def __init__(self, api_key: str):
+        super().__init__()
+        self.api_key = api_key
+
+    def run(self):
+        try:
+            from core.ai_categorizer import AICategorizer
+            categorizer = AICategorizer(api_key=self.api_key)
+            success, message, models = categorizer.test_connection()
+            self.finished.emit(success, message, models)
+        except Exception as e:
+            self.finished.emit(False, f"Erro inesperado durante o teste: {str(e)}", [])
 
 class SettingsTab(QWidget):
     def __init__(self):
@@ -46,6 +62,7 @@ class SettingsTab(QWidget):
         key_layout = QHBoxLayout()
         self.gemini_api_key = QLineEdit(self.config_data.get("gemini_api_key", ""))
         self.gemini_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self.gemini_api_key.setPlaceholderText("Cole sua chave API do Google AI Studio (AIzaSy...)")
         self.gemini_api_key.setFixedHeight(38)
         key_layout.addWidget(self.gemini_api_key)
 
@@ -71,6 +88,7 @@ class SettingsTab(QWidget):
             "gemini-2.0-flash-lite",
             "gemini-2.0-flash",
             "gemini-2.5-flash",
+            "gemini-2.0-flash-exp",
             "gemini-1.5-flash",
             "gemini-1.5-pro",
             "gemini-pro"
@@ -123,7 +141,7 @@ class SettingsTab(QWidget):
         form_layout.addRow(QLabel("Cookies Google Drive (cookies.txt):"), cookies_layout)
 
         # Temp Folder Selector
-        self.temp_folder = QLineEdit(self.config_data.get("temp_folder", "temp"))
+        self.temp_folder = QLineEdit(self.config_data.get("temp_folder", os.path.expanduser("~/Downloads/Archivon_Temp")))
         self.temp_folder.setReadOnly(True)
         self.temp_folder.setFixedHeight(38)
         
@@ -136,7 +154,7 @@ class SettingsTab(QWidget):
         form_layout.addRow(QLabel("Pasta Temporária:"), temp_layout)
 
         # Output Folder Selector
-        self.output_folder = QLineEdit(self.config_data.get("output_folder", "Biblioteca"))
+        self.output_folder = QLineEdit(self.config_data.get("output_folder", os.path.expanduser("~/Documents/Archivon_Biblioteca")))
         self.output_folder.setReadOnly(True)
         self.output_folder.setFixedHeight(38)
         
@@ -175,10 +193,10 @@ class SettingsTab(QWidget):
 
         layout.addStretch()
 
+        self._api_test_worker = None
+
     def _update_soffice_status(self):
-        from core.download_manager import DownloadManager
-        dm = DownloadManager()
-        detected = dm._get_soffice_binary(self.config_data)
+        detected = get_soffice_binary(self.config_data)
         if detected:
             self.soffice_status_label.setText(f"Status: Conectado ({detected})")
             self.soffice_status_label.setStyleSheet("font-size: 11.5px; color: #34D399; font-weight: 600;")
@@ -202,19 +220,32 @@ class SettingsTab(QWidget):
             self.toggle_key_btn.setText("Exibir")
 
     def test_gemini_api(self):
-        key = self.gemini_api_key.text().strip()
+        key = self.gemini_api_key.text().strip().strip("'\"")
         if not key:
             QMessageBox.warning(self, "Aviso", "Insira uma chave de API antes de testar.")
             return
 
-        from core.ai_categorizer import AICategorizer
-        categorizer = AICategorizer(api_key=key)
-        success, message, models = categorizer.test_connection()
+        self.test_api_btn.setEnabled(False)
+        self.test_api_btn.setText("Verificando...")
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+
+        self._api_test_worker = APITestWorker(key)
+        self._api_test_worker.finished.connect(self._on_api_test_finished)
+        self._api_test_worker.start()
+
+    def _on_api_test_finished(self, success: bool, message: str, models: list):
+        QApplication.restoreOverrideCursor()
+        self.test_api_btn.setEnabled(True)
+        self.test_api_btn.setText("Testar Conexão")
 
         if success:
             if models:
+                current_selected = self.model_combo.currentText()
                 self.model_combo.clear()
                 self.model_combo.addItems(models)
+                idx = self.model_combo.findText(current_selected)
+                if idx >= 0:
+                    self.model_combo.setCurrentIndex(idx)
             QMessageBox.information(self, "Conexão Estabelecida", f"{message}\n\nModelos atualizados no menu.")
         else:
             QMessageBox.critical(self, "Erro de Conexão", message)
@@ -230,16 +261,19 @@ class SettingsTab(QWidget):
             line_edit.setText(folder)
 
     def save_settings(self):
-        self.config_data["gemini_api_key"] = self.gemini_api_key.text().strip()
-        self.config_data["gemini_model"] = self.model_combo.currentText().strip()
-        self.config_data["soffice_path"] = self.soffice_path_edit.text().strip()
-        self.config_data["cookies_file"] = self.cookies_file.text().strip()
-        self.config_data["temp_folder"] = self.temp_folder.text().strip()
-        self.config_data["output_folder"] = self.output_folder.text().strip()
-        self.config_data["compress_pdf"] = self.compress_check.isChecked()
+        try:
+            self.config_data["gemini_api_key"] = self.gemini_api_key.text().strip().strip("'\"")
+            self.config_data["gemini_model"] = self.model_combo.currentText().strip()
+            self.config_data["soffice_path"] = self.soffice_path_edit.text().strip()
+            self.config_data["cookies_file"] = self.cookies_file.text().strip()
+            self.config_data["temp_folder"] = self.temp_folder.text().strip()
+            self.config_data["output_folder"] = self.output_folder.text().strip()
+            self.config_data["compress_pdf"] = self.compress_check.isChecked()
 
-        if save_config(self.config_data):
-            self._update_soffice_status()
-            QMessageBox.information(self, "Sucesso", "Configurações salvas com sucesso!")
-        else:
-            QMessageBox.warning(self, "Erro", "Houve um problema ao salvar as configurações.")
+            if save_config(self.config_data):
+                self._update_soffice_status()
+                QMessageBox.information(self, "Sucesso", "Configurações salvas com sucesso!")
+            else:
+                QMessageBox.warning(self, "Erro", "Houve um problema ao salvar as configurações no disco.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erro Inesperado", f"Falha ao salvar configurações: {str(e)}")

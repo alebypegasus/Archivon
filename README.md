@@ -1,7 +1,7 @@
 # ⚡ ARCHIVON — Gestor de Acervos, Sanitizador de PDFs & Curadoria com IA
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Versão-3.5.0-6366F1?style=for-the-badge" alt="Versão 3.5.0">
+  <img src="https://img.shields.io/badge/Versão-3.6.0-6366F1?style=for-the-badge" alt="Versão 3.6.0">
   <img src="https://img.shields.io/badge/Gemini-2.0%20Flash%20%7C%20Vision-F59E0B?style=for-the-badge" alt="Gemini AI">
   <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%26%20Intel-10B981?style=for-the-badge" alt="macOS Universal">
   <img src="https://img.shields.io/badge/Plataformas-macOS%20%7C%20Windows%20%7C%20Linux-38BDF8?style=for-the-badge" alt="Multiplataforma">
@@ -15,16 +15,16 @@ O **Archivon** é um aplicativo desktop autônomo para download massivo, convers
 
 Não é necessário instalar Python ou clonar código. Basta baixar o instalador pronto para o seu sistema:
 
-👉 **[Clique aqui para acessar a Página Oficial de Releases](https://github.com/alebypegasus/Archivon/releases/tag/v3.5.0)**
+👉 **[Clique aqui para acessar a Página Oficial de Releases (v3.6.0)](https://github.com/alebypegasus/Archivon/releases/tag/v3.6.0)**
 
 ### 📦 Escolha o seu Sistema:
 
 | Sistema Operacional | Arquitetura | Arquivo de Download | Instruções de Instalação |
 | :--- | :--- | :--- | :--- |
-| 🍏 **macOS (Intel)** | **Processadores Intel (Core i5 / i7 / i9)** | [**`Archivon-macOS-Intel.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-macOS-Intel.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
-| 🍏 **macOS (Apple Silicon)** | **M1, M2, M3, M4** | [**`Archivon-macOS.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-macOS.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
-| 🪟 **Windows** | **64-bit (Windows 10 / 11)** | [**`Archivon-Windows.exe`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-Windows.exe) | Dê dois cliques no executável para abrir o aplicativo diretamente. |
-| 🐧 **Linux** | **x86_64 (Ubuntu, Debian, Fedora)** | [**`Archivon-Linux-x86_64.tar.gz`**](https://github.com/alebypegasus/Archivon/releases/download/v3.5.0/Archivon-Linux-x86_64.tar.gz) | Extraia o arquivo e execute o binário `Archivon`. |
+| 🍏 **macOS (Intel)** | **Processadores Intel (Core i5 / i7 / i9)** | [**`Archivon-macOS-Intel.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.6.0/Archivon-macOS-Intel.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
+| 🍏 **macOS (Apple Silicon)** | **M1, M2, M3, M4** | [**`Archivon-macOS-AppleSilicon.dmg`**](https://github.com/alebypegasus/Archivon/releases/download/v3.6.0/Archivon-macOS-AppleSilicon.dmg) | Abra o `.dmg` e arraste o **Archivon** para a pasta **Aplicativos**. |
+| 🪟 **Windows** | **64-bit (Windows 10 / 11)** | [**`Archivon-Windows.exe`**](https://github.com/alebypegasus/Archivon/releases/download/v3.6.0/Archivon-Windows.exe) | Dê dois cliques no executável para abrir o aplicativo diretamente. |
+| 🐧 **Linux** | **x86_64 (Ubuntu, Debian, Fedora)** | [**`Archivon-Linux-x86_64.tar.gz`**](https://github.com/alebypegasus/Archivon/releases/download/v3.6.0/Archivon-Linux-x86_64.tar.gz) | Extraia o arquivo e execute o binário `Archivon`. |
 
 ---
 

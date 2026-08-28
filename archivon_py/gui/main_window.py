@@ -1,4 +1,5 @@
 import os
+import sys
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QListWidget, QStackedWidget,
     QLabel, QListWidgetItem, QPushButton, QFrame, QApplication
@@ -20,8 +21,14 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1000, 680)
         
         # Define o ícone da aplicação
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png")
-        if os.path.exists(icon_path):
+        base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(__file__)))
+        icon_candidates = [
+            os.path.join(base_dir, "assets", "icon.png"),
+            os.path.join(base_dir, "archivon_py", "assets", "icon.png"),
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png")
+        ]
+        icon_path = next((p for p in icon_candidates if os.path.exists(p)), None)
+        if icon_path:
             self.setWindowIcon(QIcon(icon_path))
 
         self.current_theme = get_current_theme_name()
@@ -97,7 +104,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.theme_btn)
 
         # Version tag
-        self.version_label = QLabel("Versão 3.5.0 • Gemini 2.0")
+        self.version_label = QLabel("Versão 3.6.0 • Gemini 2.0")
         self.version_label.setStyleSheet("font-size: 11px; padding-left: 6px; opacity: 0.6;")
         sidebar_layout.addWidget(self.version_label)
         

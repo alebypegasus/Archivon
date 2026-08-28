@@ -3,34 +3,50 @@ import json
 import sys
 import time
 import io
+import re
 
-# Fix para compatibilidade de protobuf no Python 3.14
-os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
-sys.modules["google._upb._message"] = None
+# Compatibilidade universal para Protobuf em todas as versões do Python (3.10 a 3.14+)
+if sys.version_info >= (3, 14):
+    os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+    sys.modules["google._upb._message"] = None
+else:
+    try:
+        import google._upb._message
+    except Exception:
+        os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+        sys.modules["google._upb._message"] = None
 
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 class AICategorizer:
     _discovered_model_name = None
 
-    def __init__(self, api_key: str, preferred_model: str = None):
+    def __init__(self, api_key: str = "", preferred_model: str = None):
         self.enabled = False
-        self.api_key = api_key
-        self.preferred_model = preferred_model
+        self.api_key = str(api_key).strip().strip("'\"") if api_key else ""
+        self.preferred_model = preferred_model.strip() if preferred_model and preferred_model.strip() else None
         self.model = None
+        self.model_name = self.preferred_model or "gemini-2.0-flash-lite"
         
-        if api_key:
+        if self.api_key and genai is not None:
             try:
-                genai.configure(api_key=api_key)
-                self.model_name = self._resolve_best_model(preferred_model)
+                genai.configure(api_key=self.api_key)
+                self.model_name = self._resolve_best_model(self.preferred_model)
                 if self.model_name:
                     self.model = genai.GenerativeModel(self.model_name)
                     self.enabled = True
             except Exception as e:
-                print(f"Erro ao inicializar IA Gemini: {e}")
+                print(f"Aviso ao inicializar IA Gemini: {e}")
+                self.enabled = False
 
     def _resolve_best_model(self, preferred: str = None) -> str:
-        if AICategorizer._discovered_model_name and not preferred:
+        if preferred and preferred.strip():
+            return preferred.strip()
+
+        if AICategorizer._discovered_model_name:
             return AICategorizer._discovered_model_name
 
         candidate_order = [
@@ -45,13 +61,14 @@ class AICategorizer:
             "gemini-pro"
         ]
 
-        if preferred and preferred.strip():
-            candidate_order.insert(0, preferred.strip())
+        if genai is None or not self.api_key:
+            return "gemini-2.0-flash-lite"
 
         try:
             available_models = []
             for m in genai.list_models():
-                if "generateContent" in m.supported_generation_methods:
+                methods = getattr(m, "supported_generation_methods", [])
+                if "generateContent" in methods:
                     clean_name = m.name.replace("models/", "")
                     available_models.append(clean_name)
             
@@ -66,22 +83,36 @@ class AICategorizer:
         except Exception:
             pass
 
-        return preferred if preferred else "gemini-2.0-flash-lite"
+        return "gemini-2.0-flash-lite"
 
     def test_connection(self) -> tuple[bool, str, list[str]]:
+        if genai is None:
+            return False, "Biblioteca google-generativeai não está instalada ou falhou ao carregar.", []
+
+        clean_key = str(self.api_key).strip().strip("'\"")
+        if not clean_key:
+            return False, "Chave de API não informada.", []
+
         try:
-            genai.configure(api_key=self.api_key)
+            genai.configure(api_key=clean_key)
             supported = []
             for m in genai.list_models():
-                if "generateContent" in m.supported_generation_methods:
-                    supported.append(m.name.replace("models/", ""))
+                methods = getattr(m, "supported_generation_methods", [])
+                if "generateContent" in methods:
+                    clean_name = m.name.replace("models/", "")
+                    supported.append(clean_name)
             
             if not supported:
-                return False, "Chave válida, mas nenhum modelo com suporte a generateContent foi retornado.", []
+                return False, "Chave aceita, mas nenhum modelo com suporte a 'generateContent' foi retornado pela API.", []
                 
             return True, f"Conexão bem-sucedida! {len(supported)} modelo(s) disponíveis.", supported
         except Exception as e:
-            return False, f"Falha de autenticação na API do Gemini: {str(e)}", []
+            err_msg = str(e)
+            if "API_KEY_INVALID" in err_msg or "400" in err_msg:
+                return False, "Chave de API inválida. Verifique os caracteres e tente novamente.", []
+            elif "PERMISSION_DENIED" in err_msg or "403" in err_msg:
+                return False, "Permissão negada. A chave pode estar desativada ou sem acesso ao Gemini API.", []
+            return False, f"Falha de comunicação com a API do Gemini: {err_msg}", []
 
     def _clean_fallback_title(self, raw_name: str) -> str:
         name = raw_name.replace(".pdf", "")
@@ -89,7 +120,7 @@ class AICategorizer:
             name = name[6:]
         name = name.replace("_", " ").replace("-", " ")
         name = " ".join(name.split())
-        return name.title()
+        return name.title() if name else "Documento Sem Titulo"
 
     def categorize_pdf(self, pdf_path: str) -> dict:
         """
@@ -123,27 +154,32 @@ class AICategorizer:
                 
                 # Coleta texto das primeiras 8 páginas
                 for i in range(min(8, total_pages)):
-                    page_text = doc[i].get_text()
-                    if page_text:
-                        text_sample += f"--- PÁGINA {i+1} ---\n" + page_text + "\n"
+                    try:
+                        page_text = doc[i].get_text()
+                        if page_text:
+                            text_sample += f"--- PÁGINA {i+1} ---\n" + page_text + "\n"
+                    except Exception:
+                        pass
 
                 # Coleta de amostra intermediária
                 if total_pages > 12:
                     mid_idx = total_pages // 2
                     for i in range(mid_idx, min(mid_idx + 3, total_pages)):
-                        page_text = doc[i].get_text()
-                        if page_text:
-                            text_sample += f"--- PÁGINA CENTRAL {i+1} ---\n" + page_text + "\n"
+                        try:
+                            page_text = doc[i].get_text()
+                            if page_text:
+                                text_sample += f"--- PÁGINA CENTRAL {i+1} ---\n" + page_text + "\n"
+                        except Exception:
+                            pass
 
                 # Se o PDF for um scanner puro sem OCR (< 40 caracteres de texto), extrai a imagem da capa
                 if len(text_sample.strip()) < 40:
                     try:
                         first_page = doc[0]
-                        # Renderiza capa em DPI moderado para envio rápido à API
                         pix = first_page.get_pixmap(dpi=150)
                         cover_image_bytes = pix.tobytes("png")
                     except Exception as img_err:
-                        print(f"Erro ao extrair capa para Vision: {img_err}")
+                        print(f"Aviso ao extrair capa para Vision: {img_err}")
 
             prompt_instructions = """
 Você é um bibliotecário e curador bibliográfico de elite especializado em acervos raros, literatura ocultista, esotérica, histórica, religiosa e acadêmica.
@@ -165,7 +201,7 @@ SUA MISSÃO:
    - Geral
 4. Escreva uma breve SINOPSE (1 ou 2 frases) explicando a essência da obra.
 
-RETORNE EXCLUSIVAMENTE UM JSON PURO (sem blocos ```json):
+RETORNE EXCLUSIVAMENTE UM JSON PURO:
 {
   "titulo": "Título formatado em Title Case",
   "autor": "Nome do Autor Principal",
@@ -174,10 +210,9 @@ RETORNE EXCLUSIVAMENTE UM JSON PURO (sem blocos ```json):
 }
 """
 
-            # Prepara a entrada (Texto ou Imagem da Capa via Gemini Vision)
+            # Prepara o payload (Texto ou Imagem da Capa via Gemini Vision)
             content_payload = []
             if cover_image_bytes:
-                # Modo Gemini Vision para PDFs Escaneados
                 content_payload = [
                     {"mime_type": "image/png", "data": cover_image_bytes},
                     f"{prompt_instructions}\n\n[ATENÇÃO: Este livro é um scanner sem texto digital. Analise a imagem da capa fornecida acima para identificar o título, autor e tema da obra.]"
@@ -188,12 +223,24 @@ RETORNE EXCLUSIVAMENTE UM JSON PURO (sem blocos ```json):
                 ]
 
             max_retries = 3
-            response = None
+            response_text = ""
             for attempt in range(max_retries):
                 try:
                     response = self.model.generate_content(content_payload)
-                    if response and response.text:
-                        break
+                    if response:
+                        try:
+                            # Acesso seguro a response.text prevenindo ValueError de filtros de segurança
+                            response_text = response.text
+                        except Exception:
+                            # Tenta extrair das partes manualmente
+                            if hasattr(response, "candidates") and response.candidates:
+                                candidate = response.candidates[0]
+                                if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
+                                    for part in candidate.content.parts:
+                                        if hasattr(part, "text") and part.text:
+                                            response_text += part.text
+                        if response_text and response_text.strip():
+                            break
                 except Exception as api_err:
                     err_msg = str(api_err).lower()
                     if "404" in err_msg or "not found" in err_msg:
@@ -205,11 +252,15 @@ RETORNE EXCLUSIVAMENTE UM JSON PURO (sem blocos ```json):
                     else:
                         return default_result
 
-            if not response or not response.text:
+            if not response_text or not response_text.strip():
                 return default_result
 
-            raw_text = response.text.replace("```json", "").replace("```", "").strip()
-            data = json.loads(raw_text)
+            # Extração segura de JSON via regex
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if not json_match:
+                return default_result
+
+            data = json.loads(json_match.group(0))
 
             titulo = str(data.get("titulo", fallback_title)).replace("/", "-").replace("\\", "-").strip()
             if titulo.startswith("clean_"):
@@ -229,4 +280,5 @@ RETORNE EXCLUSIVAMENTE UM JSON PURO (sem blocos ```json):
             }
 
         except Exception as e:
+            print(f"Aviso durante categorização com IA: {e}")
             return default_result
