@@ -27,6 +27,16 @@ jobs:
               ./build_macos.sh AppleSilicon
             asset_path: dist/Archivon-macOS-AppleSilicon.dmg
 
+          # macOS Intel (x86_64)
+          - os: macos-13
+            arch_label: Intel
+            artifact_name: Archivon-macOS-Intel.dmg
+            build_script: |
+              pip install -r requirements.txt pyinstaller
+              chmod +x build_macos.sh
+              ./build_macos.sh Intel
+            asset_path: dist/Archivon-macOS-Intel.dmg
+
           # Windows 64-bit
           - os: windows-latest
             arch_label: Windows-x64
